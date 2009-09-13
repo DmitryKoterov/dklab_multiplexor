@@ -1,0 +1,3 @@
+#!/bin/sh
+
+top -d1 -b -c | egrep "PI[D]|multiplexor[.]pl"
