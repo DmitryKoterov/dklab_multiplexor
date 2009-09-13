@@ -2,10 +2,12 @@
 
 ##
 ## dklab_multiplexor: simple and lightweight HTTP persistent
-## connection emulation for JavaScript.
+## connection emulation for JavaScript. Tool to handle 1000000+ 
+## parallel browser connections.
 ##
-## version 1.27
+## version 1.28
 ## (C) dkLab, http://dklab.ru/lib/dklab_multiplexor/
+## Changelog: http://github.com/DmitryKoterov/dklab_multiplexor/commits/master/
 ##
 
 use strict;
