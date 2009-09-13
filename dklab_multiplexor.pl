@@ -5,7 +5,7 @@
 ## connection emulation for JavaScript. Tool to handle 1000000+ 
 ## parallel browser connections.
 ##
-## version 1.28
+## version 1.30
 ## (C) dkLab, http://dklab.ru/lib/dklab_multiplexor/
 ## Changelog: http://github.com/DmitryKoterov/dklab_multiplexor/commits/master/
 ##
@@ -150,7 +150,7 @@ my %online = ();
 		if (!defined $self->{id}) {
 			my $id = main::extract_id($self->{data});
 			if (defined $id) {
-				$self->debug("parsed client ID: [$id]");
+				$self->debug("parsed client ID(s): [$id]");
 				$self->{id} = $id;
 			}
 		}
@@ -179,17 +179,20 @@ my %online = ();
 	sub DESTROY {
 		my ($self) = @_;
 		my $id = $self->{id};
-		if (defined $id){
-			# If the client is offline, exit now, do not add a command.
-			if (!$online{$id}) {
-				$self->debug("dropping command, client [$id] is offline");
-				return;
+		if (defined $id) {
+		    # Multiple IDs may be specified separated by ",".
+			foreach my $id (split /,/, $id) {
+				# If the client is offline, exit now, do not add a command.
+				if (!$online{$id}) {
+					$self->debug("dropping command, client [$id] is offline");
+					next;
+				}
+				# Add command to queue and set lifetime.
+				$self->debug("adding command for [$id]");
+				push @{$commands{$id}}, $self->{data};
+				# Send pending commands.
+				main::send_pendings($id);
 			}
-			# Add command to queue and set lifetime.
-			$self->debug("adding command for [$id]");
-			push @{$commands{$id}}, $self->{data};
-			# Send pending commands.
-			main::send_pendings($id);
 		}
 		$self->SUPER::DESTROY();
 	}
@@ -448,7 +451,7 @@ my %online = ();
 	# Returns this ID or undef if no ID is found yet.
 	sub extract_id {
 		my $rdata = \$_[0];
-		return $$rdata =~ /\bidentifier=(\w+)\W/s? $1 : undef;
+		return $$rdata =~ /\bidentifier=([\w,]+)\W/s? $1 : undef;
 	}
 
 
