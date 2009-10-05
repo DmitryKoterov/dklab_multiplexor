@@ -5,7 +5,7 @@
 ## connection emulation for JavaScript. Tool to handle 1000000+ 
 ## parallel browser connections.
 ##
-## version 1.30
+## version 1.31
 ## (C) dkLab, http://dklab.ru/lib/dklab_multiplexor/
 ## Changelog: http://github.com/DmitryKoterov/dklab_multiplexor/commits/master/
 ##
@@ -71,15 +71,19 @@ my %online = ();
 			push @{$clients{$id}}, $self->fh;
 			# Try to send pendings.
 			main::send_pendings($id);
-			# Set a new online -> offline timer.
-			$online{$id}->remove() if $online{$id};
+			# Reset online timer.
+			if ($online{$id}) {
+				$online{$id}->remove();
+				delete $online{$id};
+			}
+			# Create new online timer, but do not start it - it is 
+			# started at connection close, later.
 			$online{$id} = timer_new(sub { 
 				delete $commands{$id}; 
 				delete $online{$id};
 				main::logger("client [$id] is now offline");
 				# TODO: send offline message to the Server.
 			});
-			$online{$id}->add($self->server->{offline_timeout} + $self->server->{timeout});
 			return;
 		}
 	
@@ -108,6 +112,10 @@ my %online = ();
 			# Remove the client from all lists.
 			@{$clients{$id}} = grep { $_ != $self->fh } @{$clients{$id}};
 			delete $clients{$id} if !@{$clients{$id}};
+			# Turn on online timer.
+			if ($online{$id}) {
+				$online{$id}->add($self->server->{offline_timeout});
+			}
 		}
 		$self->SUPER::DESTROY();
 	}
@@ -446,12 +454,13 @@ my %online = ();
 ##
 {{{
 	package main;
+	our %CONFIG;
 	
 	# Extracts ID from the client data. 
 	# Returns this ID or undef if no ID is found yet.
 	sub extract_id {
 		my $rdata = \$_[0];
-		return $$rdata =~ /\bidentifier=([\w,]+)\W/s? $1 : undef;
+		return $$rdata =~ /\b$CONFIG{IDENTIFIER}=([\w,]+)\W/s? $1 : undef;
 	}
 
 
@@ -487,7 +496,6 @@ my %online = ();
 		logger("Starting. Opened files limit (ulimit -n): $ulimit.");
 		
 		# Read default config.
-		our %CONFIG;
 		require "dklab_multiplexor.conf";
 		
 		# Read custom config.
