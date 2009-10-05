@@ -5,7 +5,7 @@
 ## connection emulation for JavaScript. Tool to handle 1000000+ 
 ## parallel browser connections.
 ##
-## version 1.31
+## version 1.40
 ## (C) dkLab, http://dklab.ru/lib/dklab_multiplexor/
 ## Changelog: http://github.com/DmitryKoterov/dklab_multiplexor/commits/master/
 ##
@@ -136,6 +136,7 @@ my %online = ();
 	package ClientIn;
 	our @ISA = 'Event::Lib::Client';
 	use Event::Lib;
+	use POSIX '_exit';
 	
 	# Called on a new connection.
 	sub new {
@@ -154,12 +155,23 @@ my %online = ();
 		# Append data.
 		$self->{data} .= $data;
 
-		# Try to extract ID from the new data chunk.
+		# Try to extract ID from the new data chunk or process a command.
 		if (!defined $self->{id}) {
 			my $id = main::extract_id($self->{data});
 			if (defined $id) {
+				# ID is extracted, save it.
 				$self->debug("parsed client ID(s): [$id]");
 				$self->{id} = $id;
+			} else {
+				# Process aux commands.
+				if ($self->{data} =~ /^(ONLINE)\s*$/si) {
+					my $cmd = uc $1;
+					$self->debug("received aux command: $cmd");
+					shutdown($self->fh, 0);
+					my $method = "cmd_" . lc($cmd);
+					$self->$method();
+					return;
+				}
 			}
 		}
 	
@@ -203,6 +215,27 @@ my %online = ();
 			}
 		}
 		$self->SUPER::DESTROY();
+	}
+	
+	# Command: fetch all online IDs.
+	sub cmd_online {
+		my ($self) = @_;
+		my $pid = fork();
+		if (!defined $pid) {
+			$self->debug("cannot fork: $!");
+		} elsif ($pid > 0) {
+			# Parent process detaches.
+			# Do nothing here.
+		} else {
+			# Child process. Print all (many!) identifiers.
+			$self->debug("sending " . scalar(keys %online) . " online identifiers");
+			my $fh = $self->fh;
+			print $fh join(",", keys %online);
+			print $fh "\n.";
+			close($fh);
+			# We MUST use _exit(0 to avoid destructor calls.
+			_exit(0);
+		}
 	}
 }}}
 

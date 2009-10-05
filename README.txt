@@ -4,8 +4,8 @@ Changelog: http://github.com/DmitryKoterov/dklab_multiplexor/commits/master/
 
 
 
-Usage sample
-------------
+Usage samples
+-------------
 
 Be sure to install all needed libraries:
 
@@ -22,19 +22,28 @@ Now let's assume "we are the browser" - client with ID 1z2y3z
 
 # wget -O- http://localhost:8088/?identifier=1z2y3z
 
-In another console, now run something like this:
+A) Send data to an online client:
+ 
+   $f = fsockopen("localhost", "10010");
+   fwrite($f, 
+     "HTTP/1.1 200 OK\n" .
+     "X-Multiplexor: identifier=1z2y3z\n" .
+     "\n" .
+     "Hello!\n"
+   );
+   fclose($f);
 
-<?php
-$f = fsockopen("localhost", "10010");
-fwrite($f, 
-  "HTTP/1.1 200 OK\n" .
-  "X-Multiplexor: identifier=1z2y3z\n" .
-  "\n" .
-  "Hello!\n"
-);
-fclose($f);
-?>
+B) Reveive the ","-separated list of all online IDs:
 
+   $f = fsockopen("localhost", "10010");
+   fwrite($f, "ONLINE\n");
+   stream_socket_shutdown($f, STREAM_SHUT_WR);
+   $ids = stream_get_contents($f);
+   fclose($f);
+   if (substr($ids, -1) == ".") {
+     // Checked that ALL data is received ("." at the end).
+     print_r(explode(",", trim(substr($ids, 0, -1))));
+   }
 
 
 Log file mnemonics
