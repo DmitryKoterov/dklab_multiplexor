@@ -5,7 +5,7 @@
 ## connection emulation for JavaScript. Tool to handle 1000000+ 
 ## parallel browser connections.
 ##
-## version 1.40
+## version 1.41
 ## (C) dkLab, http://dklab.ru/lib/dklab_multiplexor/
 ## Changelog: http://github.com/DmitryKoterov/dklab_multiplexor/commits/master/
 ##
@@ -77,7 +77,7 @@ my %online = ();
 				delete $online{$id};
 			}
 			# Create new online timer, but do not start it - it is 
-			# started at connection close, later.
+			# started at LAST connection close, later.
 			$online{$id} = timer_new(sub { 
 				delete $commands{$id}; 
 				delete $online{$id};
@@ -112,8 +112,9 @@ my %online = ();
 			# Remove the client from all lists.
 			@{$clients{$id}} = grep { $_ != $self->fh } @{$clients{$id}};
 			delete $clients{$id} if !@{$clients{$id}};
-			# Turn on online timer.
-			if ($online{$id}) {
+			# Turn on online timer ONLY if there are no more 
+			# connections with this ID.
+			if ($online{$id} && !$clients{$id}) {
 				$online{$id}->add($self->server->{offline_timeout});
 			}
 		}
