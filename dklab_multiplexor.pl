@@ -112,9 +112,9 @@ my %online = ();
 			# Remove the client from all lists.
 			@{$clients{$id}} = grep { $_ != $self->fh } @{$clients{$id}};
 			delete $clients{$id} if !@{$clients{$id}};
-			# Turn on online timer ONLY if there are no more 
-			# connections with this ID.
-			if ($online{$id} && !$clients{$id}) {
+			# Turn on or restart online timer.
+			if ($online{$id}) {
+				$online{$id}->remove(); # needed to avoid multiple addition of the same timer
 				$online{$id}->add($self->server->{offline_timeout});
 			}
 		}
