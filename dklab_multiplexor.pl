@@ -5,7 +5,7 @@
 ## connection emulation for JavaScript. Tool to handle 1000000+ 
 ## parallel browser connections.
 ##
-## version 1.41
+## version 1.42
 ## (C) dkLab, http://dklab.ru/lib/dklab_multiplexor/
 ## Changelog: http://github.com/DmitryKoterov/dklab_multiplexor/commits/master/
 ##
@@ -488,6 +488,8 @@ my %online = ();
 ##
 {{{
 	package main;
+
+	# Loaded configuration.
 	our %CONFIG;
 	
 	# Extracts ID from the client data. 
@@ -496,7 +498,6 @@ my %online = ();
 		my $rdata = \$_[0];
 		return $$rdata =~ /\b$CONFIG{IDENTIFIER}=([\w,]+)\W/s? $1 : undef;
 	}
-
 
 	# Send first pending command to clients with specified ID.
 	# Removes sent command from the queue and closes connections to clients.
@@ -514,7 +515,6 @@ my %online = ();
 		delete $commands{$id} if !@{$commands{$id}};
 		delete $clients{$id} if !@{$clients{$id}};
 	}
-
 
 	# Logger routine.
 	sub logger {
@@ -576,6 +576,9 @@ my %online = ();
 	} else {
 		shift @ARGV;
 	}
+
+	# Turn on zombie auto-reaper.
+	$SIG{CHLD} = 'IGNORE';
 
 	while (1) {
 		my $pid = fork();
